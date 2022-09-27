@@ -1,5 +1,5 @@
-const express = require('express')
 require('dotenv').config()
+const express = require('express')
 const app = express()
 const http = require('http')
 const cors = require('cors')
@@ -10,7 +10,7 @@ const { Server } = require('socket.io')
 app.use(cors())
 
 const saveMessage = require('./services/save-message') // save the messages from harperDb
-const getMessage = require('./services/get-messages') // get the messages from harperDb
+// const getMessage = require('./services/get-messages') // get the messages from harperDb
 const getMessages = require('./services/get-messages')
 
 // Creates a server on the computer
@@ -78,7 +78,7 @@ io.on('connection', (socket) => {
     socket.on('leave_room', (data) => {
         const { username, room } = data
         socket.leave(room)
-        const timeStamp = date.now()
+        const timeStamp = Date.now()
         // Remove user from server
         usersInRoom = leaveRoom(socket.id, usersInRoom)
         socket.to(room).emit('chatroom_users', usersInRoom)
