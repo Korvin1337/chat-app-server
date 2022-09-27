@@ -23,7 +23,7 @@ function saveMessage(message, username, room) {
         url: dbUrl,
         headers: {
             'Content-Type': 'application/json',
-            Authirization: dbPw,
+            Authorization: dbPw,
         },
         data: data,
     }
