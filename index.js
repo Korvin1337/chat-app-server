@@ -38,17 +38,42 @@ io.on('connection', (socket) => {
 
     // Socket adds user to fitting room
     socket.on('join_room', (data) => {
+        
+
         const { username, room } = data // The data that`s sent from the client during join_room event being emitted
         socket.join(room) // User joins socket room
 
+        let timeStamp = Date.now() // Snapshot the current timestamp
+
+       
+
+        socket.to(room).emit('receive_message', {
+            message: `${username} joined the room`,
+            username: CHAT_BOT,
+            timeStamp,
+        })
+    
+        socket.emit('receive_message', {
+            message: `I bid you welcome ${username}`,
+            username: CHAT_BOT,
+            timeStamp,
+        })
+
+        // Saves a new user to correlating room
+        currentRoom = room
+        usersInRoom.push({ id: socket.id, username, room })
+        roomUsers = usersInRoom.filter((user) => user.room === room)
+        socket.to(room).emit('chatroom_users', roomUsers)
+        socket.emit('chatroom_users', roomUsers)
+
         getMessages(room)
-            .then((last20Messages) => {
-                socket.emit('last_20_messages', last20Messages)
-            })
-            .catch((err) => console.log(err))
+        .then((last20Messages) => {
+            socket.emit('last_20_messages', last20Messages)
+        })
+        .catch((err) => console.log(err))
     })
 
-    let timeStamp = Date.now() // Snapshot the current timestamp
+    
 
     socket.on('leave_room', (data) => {
         const { username, room } = data
@@ -57,7 +82,7 @@ io.on('connection', (socket) => {
         // Remove user from server
         usersInRoom = leaveRoom(socket.id, usersInRoom)
         socket.to(room).emit('chatroom_users', usersInRoom)
-        socket.to(room).emit('recieve_message', {
+        socket.to(room).emit('receive_message', {
             username: CHAT_BOT,
             message: `${username} left the room`,
             timeStamp,
@@ -71,38 +96,19 @@ io.on('connection', (socket) => {
         if (user?.username) {
             usersInRoom = leaveRoom(socket.id, usersInRoom)
             socket.to(currentRoom).emit('chatroom_users', usersInRoom)
-            socket.to(currentRoom).emit('recieve_message', {
+            socket.to(currentRoom).emit('receive_message', {
                 message: `${user.username} disconnected from chat`,
             })
         }
     })
     
-    // 
-    socket.to(room).emit('recieve_message', {
-        message: `${username} joined the room`,
-        username: CHAT_BOT,
-        timeStamp,
-    })
-
-    socket.emit('recieve_message', {
-        message: `I bid you welcome ${username}`,
-        username: CHAT_BOT,
-        timeStamp,
-    })
-
-    // Saves a new user to correlating room
-    currentRoom = room
-    usersInRoom.push({ id: socket.id, username, room })
-    roomUsers = usersInRoom.filter((user) => user.room === room)
-    socket.to(room).emit('chatroom_users', roomUsers)
-    socket.emit('chatroom_users', roomUsers)
-
+    //
     socket.on('send_message', (data) => {
         const { message, username, room, timeStamp } = data
-        io.in(room).emit('recieve_message', data) // send the message to the room
+        io.in(room).emit('receive_message', data) // send the message to the room
         saveMessage(message, username, room, timeStamp) // save the message in the harperDb
             .then((response => console.log(response))) 
-            .cathc((err) => console.log(err))
+            .catch((err) => console.log(err))
     })
 
 })
@@ -112,4 +118,4 @@ io.on('connection', (socket) => {
 })*/
 
 // What port the server listens on
-server.listen(1337, () => 'The server is running on the port 1337')
+server.listen(1337, () => console.log('The server is running on the port 1337'))
