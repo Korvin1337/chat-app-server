@@ -43,20 +43,20 @@ io.on('connection', (socket) => {
         const { username, room } = data // The data that`s sent from the client during join_room event being emitted
         socket.join(room) // User joins socket room
 
-        let timeStamp = Date.now() // Snapshot the current timestamp
+        let __createdtime__ = Date.now() // Snapshot the current timestamp
 
        
 
         socket.to(room).emit('receive_message', {
             message: `${username} joined the room`,
             username: CHAT_BOT,
-            timeStamp,
+            __createdtime__,
         })
     
         socket.emit('receive_message', {
             message: `I bid you welcome ${username}`,
             username: CHAT_BOT,
-            timeStamp,
+            __createdtime__,
         })
 
         // Saves a new user to correlating room
@@ -78,14 +78,14 @@ io.on('connection', (socket) => {
     socket.on('leave_room', (data) => {
         const { username, room } = data
         socket.leave(room)
-        const timeStamp = Date.now()
+        const __createdtime__ = Date.now()
         // Remove user from server
         usersInRoom = leaveRoom(socket.id, usersInRoom)
         socket.to(room).emit('chatroom_users', usersInRoom)
         socket.to(room).emit('receive_message', {
             username: CHAT_BOT,
             message: `${username} left the room`,
-            timeStamp,
+            __createdtime__,
         })
         console.log(`${username} left the room`);
     })
@@ -104,9 +104,9 @@ io.on('connection', (socket) => {
     
     //
     socket.on('send_message', (data) => {
-        const { message, username, room, timeStamp } = data
+        const { message, username, room, __createdtime__ } = data
         io.in(room).emit('receive_message', data) // send the message to the room
-        saveMessage(message, username, room, timeStamp) // save the message in the harperDb
+        saveMessage(message, username, room, __createdtime__) // save the message in the harperDb
             .then((response => console.log(response))) 
             .catch((err) => console.log(err))
     })
