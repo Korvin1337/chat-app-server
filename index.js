@@ -25,20 +25,30 @@ const io = new Server(server, {
 })
 
 const leaveRoom = require('./utils/leave-room') // handle user leaving room
+const leaveServer = require('./utils/leave-server'); // removes user from serverlisting array.
 
 // Bot for sending messages in the rooms for events triggering such as join and leave etc.
 const CHAT_BOT = 'ChatBot'
 
 let currentRoom = '' // Any of our rooms like potato, sandwich, football etc.
 let usersInRoom = [] // Lists for the current users in the room
+let usersOnServer = [] // All connected clients on socket
 
 // Socket.io-client listens for client connections
 io.on('connection', (socket) => {
     console.log(`A User Has Connected: ${socket.id}`)
 
+    socket.on('join_server', (data) => {
+        const username = data;
+        usersOnServer.push({ id: socket.id, username})
+        socket.emit('all_users', usersOnServer)
+    })
+
+    // Saves all users connected, for listing purposes.     
+    
+
     // Socket adds user to fitting room
     socket.on('join_room', (data) => {
-        
 
         const { username, room } = data // The data that`s sent from the client during join_room event being emitted
         socket.join(room) // User joins socket room
@@ -65,6 +75,8 @@ io.on('connection', (socket) => {
         roomUsers = usersInRoom.filter((user) => user.room === room)
         socket.to(room).emit('chatroom_users', roomUsers)
         socket.emit('chatroom_users', roomUsers)
+
+        
 
         getMessages(room)
         .then((last20Messages) => {
@@ -95,11 +107,14 @@ io.on('connection', (socket) => {
         const user = usersInRoom.find((user) => user.id == socket.id)
         if (user?.username) {
             usersInRoom = leaveRoom(socket.id, usersInRoom)
+            usersOnServer = leaveServer(socket.id, usersOnServer);
+            socket.emit('all_users', usersOnServer);
             socket.to(currentRoom).emit('chatroom_users', usersInRoom)
             socket.to(currentRoom).emit('receive_message', {
                 message: `${user.username} disconnected from chat`,
             })
         }
+
     })
     
     //
