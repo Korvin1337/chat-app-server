@@ -10,8 +10,9 @@ const { Server } = require("socket.io");
 app.use(cors());
 
 const saveMessage = require("./services/save-message"); // save the messages from harperDb
-// const getMessage = require('./services/get-messages') // get the messages from harperDb
-const getMessages = require("./services/get-messages");
+const getMessages = require("./services/get-messages");  // get the messages from harperDb
+const getPrivateMessages = require('./services/get-private-messages') // get the private mesages from harperDb 
+const savePrivateMessage = require('./services/save-private-message') // get the private mesages from harperDb 
 
 // Creates a server on the computer
 const server = http.createServer(app);
@@ -79,6 +80,31 @@ io.on("connection", (socket) => {
       .catch((err) => console.log(err));
   });
 
+  socket.on("join_private", (data) => {
+    const { targetUser, currentUser } = data
+
+    /*socket.join(room)*/
+    let __createdtime__ = Date.now();
+
+    /*socket.to(room).emit("receive_private_messages", {
+      message: `${username} joined the private chat`,
+      username: CHAT_BOT,
+      __createdtime__,
+    });*/
+
+    socket.emit("receive_private_messages", {
+      message: `I bid you welcome ${currentUser}`,
+      username: CHAT_BOT,
+      __createdtime__,
+    });
+
+    getPrivateMessages(data.user.id, data.targetUser.id)
+      .then((last20PrivateMessages) => {
+        socket.emit("last_20_private_messages", last20PrivateMessages)
+      })
+      .catch((err) => console.log(err.data))
+  })
+
   socket.on("leave_room", (data) => {
     const { username, room } = data;
     socket.leave(room);
@@ -113,6 +139,15 @@ io.on("connection", (socket) => {
     const { message, username, room, __createdtime__ } = data;
     io.in(room).emit("receive_message", data); // send the message to the room
     saveMessage(message, username, room, __createdtime__) // save the message in the harperDb
+      .then((response) => console.log(response))
+      .catch((err) => console.log(err));
+  });
+
+
+  socket.on("send_private_message", (data) => {
+    const { privateMessage, currentUser, __createdtime__, room } = data;
+    io.in(room).emit("receive_private_messages", data); // send the private message to the private chat
+    savePrivateMessage(privateMessage, currentUser, __createdtime__) // save the private message in the harperDb
       .then((response) => console.log(response))
       .catch((err) => console.log(err));
   });
