@@ -40,35 +40,42 @@ io.on("connection", (socket) => {
   console.log(`A User Has Connected: ${socket.id}`);
 
   socket.on("join_server", (data) => {
-    const username = data;
-    allUsers.push({ id: socket.id, username });
+    const username = data.username;
+    allUsers.push({ id: socket.id, username: username });
     socket.emit("all_users", allUsers);
+    console.log(`All Users: ${JSON.stringify(allUsers)}`);
   });
 
   // Saves all users connected, for listing purposes.
 
   // Socket adds user to fitting room
   socket.on("join_room", (data) => {
-    const { username, room } = data; // The data that`s sent from the client during join_room event being emitted
+    const { currentUser, room } = data; // The data that`s sent from the client during join_room event being emitted
     socket.join(room); // User joins socket room
 
     let __createdtime__ = Date.now(); // Snapshot the current timestamp
 
     socket.to(room).emit("receive_message", {
-      message: `${username} joined the room`,
+      message: `${currentUser.username} joined the room`,
       username: CHAT_BOT,
       __createdtime__,
     });
 
     socket.emit("receive_message", {
-      message: `I bid you welcome ${username}`,
+      message: `I bid you welcome ${currentUser.username}`,
       username: CHAT_BOT,
       __createdtime__,
     });
 
     // Saves a new user to correlating room
+    // FIXA DENNA, LÄGG TILL RUM FUNKAR EJ???
     chatRoom = room;
-    allUsers.push({ id: socket.id, username, room });
+    allUsers.filter((user) => {
+      if (user.username === currentUser.username) {
+        currentUser.room = room
+      }
+    })
+    /*allUsers.push({ currentUser });*/
     chatRoomUsers = allUsers.filter((user) => user.room === room);
     socket.to(room).emit("chatroom_users", chatRoomUsers);
     socket.emit("chatroom_users", chatRoomUsers);
@@ -83,17 +90,17 @@ io.on("connection", (socket) => {
   socket.on("join_private", (data) => {
     const { targetUser, currentUser } = data
 
-    /*socket.join(room)*/
+    socket.join(room)
     let __createdtime__ = Date.now();
 
-    /*socket.to(room).emit("receive_private_messages", {
-      message: `${username} joined the private chat`,
+    socket.to(room).emit("receive_private_messages", {
+      message: `${currentUser.username} joined the private chat`,
       username: CHAT_BOT,
       __createdtime__,
-    });*/
+    });
 
     socket.emit("receive_private_messages", {
-      message: `I bid you welcome ${currentUser}`,
+      message: `I bid you welcome ${currentUser.username}`,
       username: CHAT_BOT,
       __createdtime__,
     });
@@ -106,7 +113,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("leave_room", (data) => {
-    const { username, room } = data;
+    const { currentUser, room } = data;
     socket.leave(room);
     const __createdtime__ = Date.now();
     // Remove user from server
@@ -114,10 +121,10 @@ io.on("connection", (socket) => {
     socket.to(room).emit("chatroom_users", allUsers);
     socket.to(room).emit("receive_message", {
       username: CHAT_BOT,
-      message: `${username} left the room`,
+      message: `${currentUser.username} left the room`,
       __createdtime__,
     });
-    console.log(`${username} left the room`);
+    console.log(`${currentUser.username} left the room`);
   });
 
   socket.on("disconnect", () => {
@@ -125,8 +132,8 @@ io.on("connection", (socket) => {
     const user = allUsers.find((user) => user.id == socket.id);
     if (user?.username) {
       allUsers = leaveRoom(socket.id, allUsers);
-      /*allUsers = leaveServer(socket.id, allUsers);
-      socket.emit("all_users", allUsers);*/
+      allUsers = leaveServer(socket.id, allUsers);
+      socket.emit("all_users", allUsers);
       socket.to(chatRoom).emit("chatroom_users", allUsers);
       socket.to(chatRoom).emit("receive_message", {
         message: `${user.username} disconnected from chat`,
